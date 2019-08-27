@@ -9,7 +9,7 @@
              :repl {:dependencies [[org.clojure/core.async "0.4.500"]]}
              :test {:dependencies [[org.clojure/core.async "0.4.500"]]}}
   :plugins [[lein-codox "0.10.3"]]
-  :codox {:output-path "doc"}
+  :codox {:output-path "docs"}
   :repl-options {:init-ns intake.core}
   :release-tasks [["vcs" "assert-committed"]
                   ["change" "version"
