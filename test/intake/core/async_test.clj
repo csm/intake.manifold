@@ -17,12 +17,11 @@
             (is (true? rez))
             (recur (dec num)))
           (async/close! s)))
-      (async/go-loop [num 10]
-        (if-let [m (async/<! s)]
-          (do
-            (is (= num m))
-            (recur (dec num)))
-          (is (s/closed? s)))))
+      (async/<!! (async/go-loop [num 10]
+                   (when-let [m (async/<! s)]
+                     (is (= num m))
+                     (recur (dec num)))))
+      (is (s/closed? s)))
     (let [d (d/deferred)
           s (s/->source d)]
       (async/go
