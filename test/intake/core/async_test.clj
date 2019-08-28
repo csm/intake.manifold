@@ -34,4 +34,9 @@
       (async/go (is (= :foo (async/<! d))))
       (async/go (is (= :foo (async/<! d))))
       (is (true? (async/put! d :foo)))
-      (is (false? (async/put! d :bar))))))
+      (is (false? (async/put! d :bar))))
+    (let [d (d/deferred)]
+      (is (= nil (async/poll! d)))
+      (is (true? (async/put! d :foo)))
+      (is (= :foo (async/poll! d)))
+      (is (= :foo (async/poll! d))))))

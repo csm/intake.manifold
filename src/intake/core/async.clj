@@ -55,16 +55,18 @@
 
   IDeferred
   (take! [this handler]
-    (let [completion (fn [result]
-                       (.lock ^Lock handler)
-                       (let [put-cb (and (p/active? handler) (p/commit handler))]
-                         (.unlock handler)
-                         (when put-cb
-                           (put-cb result))))]
-      (d/on-realized this
-                     completion
-                     completion)
-      nil)))
+    (if (d/realized? this)
+      this
+      (let [completion (fn [result]
+                         (.lock ^Lock handler)
+                         (let [put-cb (and (p/active? handler) (p/commit handler))]
+                           (.unlock handler)
+                           (when put-cb
+                             (put-cb result))))]
+        (d/on-realized this
+                       completion
+                       completion)
+        nil))))
 
 (extend-protocol p/Channel
   IEventStream
