@@ -9,9 +9,15 @@
             [manifold.stream :as s]
             manifold.stream.core
             [manifold.deferred :as d])
-  (:import [java.util.concurrent.locks Lock]
+  (:import [clojure.lang IDeref]
+           [java.util.concurrent.locks Lock]
            [manifold.deferred IDeferred IMutableDeferred]
            [manifold.stream.core IEventStream IEventSink IEventSource]))
+
+(defn- box
+  [value]
+  (reify IDeref
+    (deref [_] value)))
 
 (extend-protocol p/WritePort
   IEventSink
@@ -30,7 +36,7 @@
 
   IMutableDeferred
   (put! [this val _handler]
-    (ref (d/success! this val))))
+    (box (d/success! this val))))
 
 (extend-protocol p/ReadPort
   IEventSource
