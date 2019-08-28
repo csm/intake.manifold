@@ -22,17 +22,7 @@
 (extend-protocol p/WritePort
   IEventSink
   (put! [this val handler]
-    (let [completion (fn [result]
-                       (.lock ^Lock handler)
-                       (let [take-cb (and (p/active? handler) (p/commit handler))]
-                         (.unlock handler)
-                         (when take-cb
-                           (take-cb result))))]
-      (d/on-realized
-        (s/put! this val)
-        completion
-        completion)
-      nil))
+    (p/take! (s/put! this val) handler))
 
   IMutableDeferred
   (put! [this val _handler]
@@ -41,17 +31,7 @@
 (extend-protocol p/ReadPort
   IEventSource
   (take! [this handler]
-    (let [completion (fn [result]
-                       (.lock ^Lock handler)
-                       (let [put-cb (and (p/active? handler) (p/commit handler))]
-                         (.unlock handler)
-                         (when put-cb
-                           (put-cb result))))]
-      (d/on-realized
-        (s/take! this)
-        completion
-        completion)
-      nil))
+    (p/take! (s/take! this) handler))
 
   IDeferred
   (take! [this handler]
