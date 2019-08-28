@@ -27,3 +27,11 @@
       (async/go
         (is (= :test (async/<! s))))
       (d/success! d :test))))
+
+(deftest test-deferred-integration
+  (testing "that deferreds can be used as promise channels"
+    (let [d (d/deferred)]
+      (async/go (is (= :foo (async/<! d))))
+      (async/go (is (= :foo (async/<! d))))
+      (is (true? (async/put! d :foo)))
+      (is (false? (async/put! d :bar))))))
