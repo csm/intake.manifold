@@ -50,6 +50,14 @@
       (async/>!! s :foo)
       (is (= :foo @rez)))))
 
+(deftest test-<!-after-timeout
+  (testing "that another take works after a timeout"
+    (let [s (s/stream)]
+      (is (= :timeout (async/alt!! s ([v] v)
+                                   (async/timeout 10) :timeout)))
+      (s/put! s :after-timeout)
+      (is (= :after-timeout (async/<!! s))))))
+
 (comment
   (deftest test-poll-streams
     "I can't get poll! to work on streams; punting for now"
