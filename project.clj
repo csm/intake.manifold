@@ -5,9 +5,9 @@
             :url "https://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [manifold "0.1.8"]]
-  :profiles {:provided {:dependencies [[org.clojure/core.async "0.4.500"]]}
-             :repl {:dependencies [[org.clojure/core.async "0.4.500"]]}
-             :test {:dependencies [[org.clojure/core.async "0.4.500"]]}}
+  :profiles {:provided {:dependencies [[org.clojure/core.async "1.2.603"]]}
+             :repl {:dependencies [[org.clojure/core.async "1.2.603"]]}
+             :test {:dependencies [[org.clojure/core.async "1.2.603"]]}}
   :plugins [[lein-codox "0.10.3"]
             [lein-eftest "0.5.8"]]
   :codox {:output-path "docs"}

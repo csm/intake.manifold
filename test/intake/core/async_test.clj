@@ -5,6 +5,12 @@
             [manifold.stream :as s]
             [manifold.deferred :as d]))
 
+(use-fixtures :each
+  (fn [test]
+    (let [result (async/alt!! (async/thread (test)) :ok
+                              (async/timeout 10000) :timeout)]
+      (is (not= :timeout result)))))
+
 (deftest test-stream-integration
   (testing "that streams can be used as channels"
     (let [s (s/stream)]
@@ -21,9 +27,11 @@
             (recur (dec num)))
           (async/close! s)))
       (async/<!! (async/go-loop [num 10]
-                   (when-let [m (async/<! s)]
-                     (is (= num m))
-                     (recur (dec num)))))
+                   (if (neg? num)
+                     (is (not (neg? num)))
+                     (when-let [m (async/<! s)]
+                       (is (= num m))
+                       (recur (dec num))))))
       (is (s/closed? s)))))
 
 (deftest test-wrapped-deferreds
@@ -58,13 +66,12 @@
       (s/put! s :after-timeout)
       (is (= :after-timeout (async/<!! s))))))
 
-(comment
-  (deftest test-poll-streams
-    "I can't get poll! to work on streams; punting for now"
-    (let [s (s/stream)]
-      (is (nil? (async/poll! s)))
-      (s/put! s :poll-after)
-      (async/go (is (= :poll-after (async/poll! s)))))))
+(deftest test-poll-streams
+  "I can't get poll! to work on streams; punting for now"
+  (let [s (s/stream)]
+    (is (nil? (async/poll! s)))
+    (s/put! s :poll-after)
+    (async/go (is (= :poll-after (async/poll! s))))))
 
 (deftest test-deferred-integration
   (testing "that deferreds can be used as promise channels"
