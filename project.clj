@@ -1,4 +1,4 @@
-(defproject com.github.csm/intake "0.1.4"
+(defproject com.github.csm/intake "0.1.5-SNAPSHOT"
   :description "Bindings-preserving manifold.deferred operations, core.async compat for manifold"
   :url "https://github.com/csm/intake.manifold"
   :license {:name "MIT"
