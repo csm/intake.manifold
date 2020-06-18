@@ -37,10 +37,11 @@
 (deftest test-wrapped-deferreds
   (testing "deferred wrapped as a source"
     (let [d (d/deferred)
-          s (s/->source d)]
-      (async/go
-        (is (= :test (async/<! s))))
-      (d/success! d :test))))
+          s (s/->source d)
+          chan (async/go
+                 (is (= :test (async/<! s))))]
+      (d/success! d :test)
+      (async/<!! chan))))
 
 (deftest test-<!-after-poll
   (testing "that takes work after polling"
@@ -71,7 +72,7 @@
   (let [s (s/stream)]
     (is (nil? (async/poll! s)))
     (s/put! s :poll-after)
-    (async/go (is (= :poll-after (async/poll! s))))))
+    (async/<!! (async/go (is (= :poll-after (async/poll! s)))))))
 
 (deftest test-deferred-integration
   (testing "that deferreds can be used as promise channels"
@@ -88,3 +89,82 @@
       (is (true? (async/put! d :foo)))
       (is (= :foo (async/poll! d)))
       (is (= :foo (async/poll! d))))))
+
+(deftest test-multiple-takes
+  (testing "that we can take from multiple go blocks"
+    (let [s (s/stream)
+          values1 (atom [])
+          values2 (atom [])
+          go1 (async/go-loop []
+                (when-let [v (async/<! s)]
+                  (println (str "go1 received: " v))
+                  (swap! values1 conj v)
+                  (recur)))
+          go2 (async/go-loop []
+                (when-let [v (async/<! s)]
+                  (println (str "go2 received: " v))
+                  (swap! values2 conj v)
+                  (recur)))
+          puts (atom [])]
+      (dotimes [i 10]
+        (async/>!! s i)
+        (swap! puts conj i))
+      (async/close! s)
+      (is (not= :timeout (async/alt!! go1 :ok
+                                      (async/timeout 1000) :timeout)))
+      (is (not= :timeout (async/alt!! go2 :ok
+                                      (async/timeout 1000) :timeout)))
+      (is (= (+ (count @values1) (count @values2)) (count @puts))))))
+
+(deftest test-mult
+  (testing "that core.async mult/tap works"
+    (let [s (s/stream)
+          mult (async/mult s)
+          tap1 (async/tap mult (s/stream))
+          tap2 (async/tap mult (s/stream))
+          items1 (atom [])
+          items2 (atom [])]
+      (async/go-loop []
+        (when-let [item (async/<! tap1)]
+          (swap! items1 conj item)
+          (recur)))
+      (async/go-loop []
+        (when-let [item (async/<! tap2)]
+          (swap! items2 conj item)
+          (recur)))
+      (async/<!!
+        (async/go-loop [n (range 10)]
+          (when-let [x (first n)]
+            (async/>! s x)
+            (recur (rest n)))))
+      (is (= (range 10) @items1))
+      (is (= (range 10) @items2)))))
+
+(deftest test-sub
+  (testing "that core.async pub/sub works"
+    (let [s (s/stream)
+          pub (async/pub s identity)
+          sub1 (async/sub pub :foo (s/stream))
+          sub2 (async/sub pub :bar (s/stream))
+          items1 (atom [])
+          items2 (atom [])
+          ch1 (async/go-loop []
+                (when-let [x (async/<! sub1)]
+                  (swap! items1 conj x)
+                  (recur)))
+          ch2 (async/go-loop []
+                (when-let [x (async/<! sub2)]
+                  (swap! items2 conj x)
+                  (recur)))]
+      (async/<!!
+        (async/go-loop [vals (interleave (repeat 5 :foo) (repeat 5 :bar) (repeat 5 :baz))]
+          (when-let [v (first vals)]
+            (async/>! s v)
+            (recur (rest vals)))))
+      (async/close! s)
+      (is (= :ok (async/alt!! ch1 :ok
+                              (async/timeout 1000) :timeout)))
+      (is (= :ok (async/alt!! ch2 :ok
+                              (async/timeout 1000) :timeout)))
+      (is (= (repeat 5 :foo) @items1))
+      (is (= (repeat 5 :bar) @items2)))))
